@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Controle Financeiro Pessoal</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Supabase JS Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen pb-12">
+
+  <!-- Header -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-10">
+    <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <div class="p-2 bg-emerald-500 text-white rounded-lg">
+          <i data-lucide="wallet" class="w-5 h-5"></i>
+        </div>
+        <h1 class="text-xl font-bold text-slate-900">Finanças Pessoais</h1>
+      </div>
+      <!-- Seletor de Mês/Ano -->
+      <div class="flex items-center gap-2 bg-slate-100 p-1.5 rounded-lg text-sm">
+        <i data-lucide="calendar" class="w-4 h-4 text-slate-500 ml-1"></i>
+        <input type="month" id="filterMonth" class="bg-transparent border-0 font-medium text-slate-700 focus:outline-none cursor-pointer">
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-4 mt-6 space-y-6">
+
+    <!-- Resumo Geral Acumulado (Todos os Meses) -->
+    <section class="bg-slate-900 text-white rounded-2xl p-6 shadow-sm">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Saldo Geral Acumulado (Todos os Meses)</span>
+          <div id="totalBalance" class="text-3xl font-extrabold mt-1 text-white">R$ 0,00</div>
+        </div>
+        <div class="flex gap-6 border-t md:border-t-0 border-slate-800 pt-4 md:pt-0">
+          <div>
+            <span class="text-xs text-slate-400 block">Total Entradas Ano</span>
+            <span id="totalIncomeAcc" class="text-lg font-bold text-emerald-400">R$ 0,00</span>
+          </div>
+          <div>
+            <span class="text-xs text-slate-400 block">Total Saídas Ano</span>
+            <span id="totalExpenseAcc" class="text-lg font-bold text-rose-400">R$ 0,00</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Indicadores do Mês Selecionado -->
+    <section class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+        <div>
+          <p class="text-xs font-medium text-slate-500 uppercase">Entradas do Mês</p>
+          <p id="monthIncome" class="text-2xl font-bold text-emerald-600 mt-1">R$ 0,00</p>
+        </div>
+        <div class="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
+          <i data-lucide="arrow-down-left" class="w-6 h-6"></i>
+        </div>
+      </div>
+
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+        <div>
+          <p class="text-xs font-medium text-slate-500 uppercase">Saídas do Mês</p>
+          <p id="monthExpense" class="text-2xl font-bold text-rose-600 mt-1">R$ 0,00</p>
+        </div>
+        <div class="p-3 bg-rose-50 text-rose-600 rounded-xl">
+          <i data-lucide="arrow-up-right" class="w-6 h-6"></i>
+        </div>
+      </div>
+
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+        <div>
+          <p class="text-xs font-medium text-slate-500 uppercase">Saldo do Mês</p>
+          <p id="monthBalance" class="text-2xl font-bold text-slate-900 mt-1">R$ 0,00</p>
+        </div>
+        <div class="p-3 bg-blue-50 text-blue-600 rounded-xl">
+          <i data-lucide="scale" class="w-6 h-6"></i>
+        </div>
+      </div>
+    </section>
+
+    <!-- Conteúdo Principal: Formulário + Histórico -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+      <!-- Formulário de Transação -->
+      <section class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm lg:col-span-1 h-fit">
+        <h2 id="formTitle" class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+          <i data-lucide="plus-circle" class="w-5 h-5 text-emerald-600"></i>
+          Nova Transação
+        </h2>
+
+        <form id="transactionForm" class="space-y-4">
+          <input type="hidden" id="editId">
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Tipo</label>
+            <div class="grid grid-cols-2 gap-2">
+              <label class="flex items-center justify-center p-2.5 border rounded-xl cursor-pointer text-sm font-medium has-[:checked]:bg-emerald-50 has-[:checked]:border-emerald-500 has-[:checked]:text-emerald-700">
+                <input type="radio" name="type" value="entrada" checked class="hidden">
+                Entrada
+              </label>
+              <label class="flex items-center justify-center p-2.5 border rounded-xl cursor-pointer text-sm font-medium has-[:checked]:bg-rose-50 has-[:checked]:border-rose-500 has-[:checked]:text-rose-700">
+                <input type="radio" name="type" value="saida" class="hidden">
+                Saída
+              </label>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Valor (R$)</label>
+            <input type="number" step="0.01" id="amount" required placeholder="0,00" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Descrição</label>
+            <input type="text" id="description" required placeholder="Ex: Manutenção do carro..." class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Categoria</label>
+            <select id="category" required class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
+              <option value="Transporte">Transporte</option>
+              <option value="Manutenção">Manutenção</option>
+              <option value="Peças">Peças</option>
+              <option value="Viagem">Viagem</option>
+              <option value="Salário">Salário</option>
+              <option value="Acerto">Acerto</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Data</label>
+            <input type="date" id="date" required class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+          </div>
+
+          <div class="flex gap-2 pt-2">
+            <button type="submit" id="submitBtn" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2.5 rounded-xl text-sm transition">
+              Salvar Registro
+            </button>
+            <button type="button" id="cancelBtn" class="hidden bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium px-4 py-2.5 rounded-xl text-sm transition">
+              Cancelar
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Histórico de Transações com Busca e Filtro -->
+      <section class="bg-white rounded-2xl border border-slate-200 shadow-sm lg:col-span-2 overflow-hidden flex flex-col">
+        <div class="p-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div class="flex items-center gap-2">
+            <i data-lucide="history" class="w-5 h-5 text-slate-500"></i>
+            <h2 class="text-lg font-bold text-slate-900">Histórico de Transações</h2>
+            <span id="monthBadge" class="text-xs font-semibold bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full"></span>
+          </div>
+
+          <!-- Filtros de Busca -->
+          <div class="flex flex-col sm:flex-row items-center gap-2">
+            <div class="relative w-full sm:w-48">
+              <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-2.5"></i>
+              <input type="text" id="searchInput" placeholder="Buscar descrição..." class="w-full pl-9 pr-3 py-1.5 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            </div>
+            <select id="filterCategory" class="w-full sm:w-auto text-xs border border-slate-200 rounded-xl px-3 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <option value="todas">Todas as Categorias</option>
+              <option value="Transporte">Transporte</option>
+              <option value="Manutenção">Manutenção</option>
+              <option value="Peças">Peças</option>
+              <option value="Viagem">Viagem</option>
+              <option value="Salário">Salário</option>
+              <option value="Acerto">Acerto</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto flex-1">
+          <table class="w-full text-left text-sm">
+            <thead class="bg-slate-50 border-b border-slate-100 text-slate-500 text-xs uppercase font-semibold">
+              <tr>
+                <th class="py-3 px-4">Data</th>
+                <th class="py-3 px-4">Descrição</th>
+                <th class="py-3 px-4">Categoria</th>
+                <th class="py-3 px-4 text-right">Valor</th>
+                <th class="py-3 px-4 text-center">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="transactionList" class="divide-y divide-slate-100">
+              <!-- Renderizado via JS -->
+            </tbody>
+          </table>
+          <div id="emptyState" class="hidden text-center py-12 text-slate-400">
+            <i data-lucide="inbox" class="w-10 h-10 mx-auto mb-2 opacity-50"></i>
+            <p>Nenhuma transação encontrada.</p>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <script>
+    // Credenciais do Supabase configuradas
+    const SUPABASE_URL = 'https://ynhdxfjurtlfopuauifo.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_-YqsJepTZwaOZjRKnO5pRA_vlhAKL47';
+    const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let transactions = [];
+
+    // Elementos DOM
+    const transactionForm = document.getElementById('transactionForm');
+    const filterMonthInput = document.getElementById('filterMonth');
+    const searchInput = document.getElementById('searchInput');
+    const filterCategory = document.getElementById('filterCategory');
+    const transactionList = document.getElementById('transactionList');
+    const emptyState = document.getElementById('emptyState');
+    const submitBtn = document.getElementById('submitBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const editIdInput = document.getElementById('editId');
+    const formTitle = document.getElementById('formTitle');
+
+    // Data inicial
+    const today = new Date();
+    filterMonthInput.value = today.toISOString().slice(0, 7);
+    document.getElementById('date').value = today.toISOString().slice(0, 10);
+
+    function formatCurrency(value) {
+      return Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+
+    // Buscar transações no Supabase
+    async function loadTransactions() {
+      const { data, error } = await db.from('transacoes').select('*');
+      if (error) {
+        console.error('Erro ao buscar transações:', error);
+        alert('Erro ao carregar dados do Supabase. Verifique se a tabela "transacoes" foi criada.');
+        return;
+      }
+      transactions = data || [];
+      render();
+    }
+
+    function render() {
+      const selectedMonth = filterMonthInput.value;
+      const searchTerm = searchInput.value.toLowerCase().trim();
+      const selectedCategory = filterCategory.value;
+
+      // Filtro para a tabela (Mês + Busca + Categoria)
+      const filtered = transactions.filter(t => {
+        const matchesMonth = t.date.startsWith(selectedMonth);
+        const matchesSearch = t.description.toLowerCase().includes(searchTerm);
+        const matchesCategory = selectedCategory === 'todas' || t.category === selectedCategory;
+        return matchesMonth && matchesSearch && matchesCategory;
+      });
+
+      // Cálculo dos totais do mês selecionado
+      const monthTransactions = transactions.filter(t => t.date.startsWith(selectedMonth));
+      const monthIncome = monthTransactions.filter(t => t.type === 'entrada').reduce((acc, t) => acc + Number(t.amount), 0);
+      const monthExpense = monthTransactions.filter(t => t.type === 'saida').reduce((acc, t) => acc + Number(t.amount), 0);
+      const monthBalance = monthIncome - monthExpense;
+
+      // Cálculo dos totais de TODOS os meses do banco
+      const totalIncomeAcc = transactions.filter(t => t.type === 'entrada').reduce((acc, t) => acc + Number(t.amount), 0);
+      const totalExpenseAcc = transactions.filter(t => t.type === 'saida').reduce((acc, t) => acc + Number(t.amount), 0);
+      const totalBalanceAcc = totalIncomeAcc - totalExpenseAcc;
+
+      // Atualiza os cards de resumo
+      document.getElementById('monthIncome').textContent = formatCurrency(monthIncome);
+      document.getElementById('monthExpense').textContent = formatCurrency(monthExpense);
+      document.getElementById('monthBalance').textContent = formatCurrency(monthBalance);
+      
+      document.getElementById('totalBalance').textContent = formatCurrency(totalBalanceAcc);
+      document.getElementById('totalIncomeAcc').textContent = formatCurrency(totalIncomeAcc);
+      document.getElementById('totalExpenseAcc').textContent = formatCurrency(totalExpenseAcc);
+
+      // Renderiza a Tabela
+      transactionList.innerHTML = '';
+      if (filtered.length === 0) {
+        emptyState.classList.remove('hidden');
+      } else {
+        emptyState.classList.add('hidden');
+        filtered.sort((a, b) => new Date(b.date) - new Date(a.date)).forEach(t => {
+          const tr = document.createElement('tr');
+          tr.className = 'hover:bg-slate-50/80 transition-colors';
+          tr.innerHTML = `
+            <td class="py-3 px-4 font-medium text-slate-600">${t.date.split('-').reverse().join('/')}</td>
+            <td class="py-3 px-4 font-semibold text-slate-800">${t.description}</td>
+            <td class="py-3 px-4"><span class="bg-slate-100 text-slate-600 text-xs font-medium px-2 py-1 rounded-md">${t.category}</span></td>
+            <td class="py-3 px-4 text-right font-bold ${t.type === 'entrada' ? 'text-emerald-600' : 'text-rose-600'}">
+              ${t.type === 'entrada' ? '+' : '-'} ${formatCurrency(t.amount)}
+            </td>
+            <td class="py-3 px-4 text-center">
+              <div class="flex items-center justify-center gap-1">
+                <button onclick="editTransaction('${t.id}')" title="Editar" class="p-1.5 hover:bg-slate-100 text-slate-500 hover:text-blue-600 rounded-lg">
+                  <i data-lucide="pencil" class="w-4 h-4"></i>
+                </button>
+                <button onclick="deleteTransaction('${t.id}')" title="Excluir" class="p-1.5 hover:bg-slate-100 text-slate-500 hover:text-rose-600 rounded-lg">
+                  <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </td>
+          `;
+          transactionList.appendChild(tr);
+        });
+      }
+
+      const [year, month] = selectedMonth.split('-');
+      const dateObj = new Date(year, month - 1);
+      document.getElementById('monthBadge').textContent = dateObj.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+      lucide.createIcons();
+    }
+
+    // Salvar ou Editar no Supabase
+    transactionForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Salvando...';
+
+      const type = document.querySelector('input[name="type"]:checked').value;
+      const amount = parseFloat(document.getElementById('amount').value);
+      const description = document.getElementById('description').value.trim();
+      const category = document.getElementById('category').value;
+      const date = document.getElementById('date').value;
+      const editId = editIdInput.value;
+
+      let result;
+      if (editId) {
+        result = await db.from('transacoes').update({ type, amount, description, category, date }).eq('id', editId);
+      } else {
+        result = await db.from('transacoes').insert([{ type, amount, description, category, date }]);
+      }
+
+      submitBtn.disabled = false;
+
+      if (result.error) {
+        console.error('Erro ao salvar:', result.error);
+        alert('Erro ao salvar transação no Supabase.');
+      } else {
+        resetForm();
+        await loadTransactions();
+      }
+    });
+
+    function editTransaction(id) {
+      const item = transactions.find(t => t.id === id);
+      if (!item) return;
+
+      editIdInput.value = item.id;
+      document.querySelector(`input[name="type"][value="${item.type}"]`).checked = true;
+      document.getElementById('amount').value = item.amount;
+      document.getElementById('description').value = item.description;
+      document.getElementById('category').value = item.category;
+      document.getElementById('date').value = item.date;
+
+      formTitle.innerHTML = `<i data-lucide="pencil" class="w-5 h-5 text-blue-600"></i> Editar Transação`;
+      submitBtn.textContent = 'Atualizar';
+      submitBtn.className = submitBtn.className.replace('bg-emerald-600 hover:bg-emerald-700', 'bg-blue-600 hover:bg-blue-700');
+      cancelBtn.classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    async function deleteTransaction(id) {
+      if (confirm('Tem certeza que deseja excluir esta transação?')) {
+        const { error } = await db.from('transacoes').delete().eq('id', id);
+        if (error) {
+          console.error('Erro ao excluir:', error);
+          alert('Erro ao excluir no Supabase.');
+        } else {
+          await loadTransactions();
+        }
+      }
+    }
+
+    function resetForm() {
+      transactionForm.reset();
+      editIdInput.value = '';
+      formTitle.innerHTML = `<i data-lucide="plus-circle" class="w-5 h-5 text-emerald-600"></i> Nova Transação`;
+      submitBtn.textContent = 'Salvar Registro';
+      submitBtn.className = submitBtn.className.replace('bg-blue-600 hover:bg-blue-700', 'bg-emerald-600 hover:bg-emerald-700');
+      cancelBtn.classList.add('hidden');
+      document.getElementById('date').value = new Date().toISOString().slice(0, 10);
+      lucide.createIcons();
+    }
+
+    cancelBtn.addEventListener('click', resetForm);
+    filterMonthInput.addEventListener('change', render);
+    searchInput.addEventListener('input', render);
+    filterCategory.addEventListener('change', render);
+
+    // Carrega os dados iniciais do Supabase
+    loadTransactions();
+  </script>
+</body>
+</html>
